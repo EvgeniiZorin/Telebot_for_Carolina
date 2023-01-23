@@ -27,7 +27,7 @@ def start(message):
 
 	/send_cat_text - send one cat photo with the text you write
 	
-	/send_quote - send a memorable quote""")
+	/quote - send a memorable quote""")
 
 @bot.message_handler(commands=['help'])
 def help(message):
@@ -43,7 +43,7 @@ def help(message):
 
 	/send_cat_text - send one cat photo with the text you write
 	
-	/send_quote - send a memorable quote""")
+	/quote - send a memorable quote""")
 
 def get_random_quote() -> str:
 	df = pd.read_csv("https://raw.githubusercontent.com/EvgeniiZorin/FILES_DATABASE/main/quotes_for_carolina.csv")
