@@ -23,7 +23,7 @@ def start(message):
 	/cats_every_hour - send a cat photo every 1 hour
 	/stop - stop regularly sending cat photos (until you resume)
 
-	/send_cats - immediately send 5 cat photos
+	/send_cats - immediately send 3 cat photos
 
 	/send_cat_text - send one cat photo with the text you write
 	
@@ -39,7 +39,7 @@ def help(message):
 	/cats_every_hour - send a cat photo every 1 hour
 	/stop - stop regularly sending cat photos (until you resume)
 
-	/send_cats - immediately send 5 cat photos
+	/send_cats - immediately send 3 cat photos
 
 	/send_cat_text - send one cat photo with the text you write
 	
