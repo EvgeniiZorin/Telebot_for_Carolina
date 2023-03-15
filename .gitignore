@@ -11,3 +11,6 @@ env
 # Scrap notebook
 checks.ipynb
 practice.ipynb
+
+# Private files
+secrets.py
