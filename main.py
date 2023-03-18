@@ -9,7 +9,19 @@ import os
 telebot_token = os.environ.get('TELEBOT_API_CARO')
 bot = telebot.TeleBot(telebot_token)
 
-a = 0
+def read_file():
+	with open('status.txt', 'r') as f:
+		text = f.readline()
+	return text
+
+def write_to_file(switch:int):
+	dict1 = {0:'not_running', 1:'running'}
+	with open('status.txt', 'w') as f:
+		f.write(dict1[switch])
+
+# Initially, make sure that nothing is running as reflected in the 
+# "status.txt" file
+write_to_file(0)
 
 @bot.message_handler(commands=['start'])
 def start(message):
@@ -59,31 +71,43 @@ def send_quote(message):
 
 
 
-@bot.message_handler(commands=['cats_every_min', 'cats_every_hour'])
+@bot.message_handler(commands=[
+	'cats_every_sec',
+	'cats_every_min', 'cats_every_hour'
+])
 def cats_every_min(message):
+	print(' - start "cats_every_min"')
 	dict1 = {
-		# 'cats_every_sec': 1, 
+		'/cats_every_sec': 5, 
 		'/cats_every_min':60, 
 		'/cats_every_hour':3600
 		}
-	global a
-	if a == 1:
-		a = 0
-		bot.send_message(message.chat.id, "Frequency of cat photos has been changed.")
-	if a == 0:
-		bot.send_message(message.chat.id, "Starting...")
-		a = 1
-		while a == 1:
-			bot.send_message(message.chat.id, "Here's a photo of a cat and a quote!")
-			full_quote2 = get_random_quote()
-			bot.send_message(message.chat.id, full_quote2)
-			r = requests.get('https://cataas.com/cat')
-			img = Image.open(BytesIO(r.content))
-			# img
-			bot.send_photo(message.chat.id, img)
-			time.sleep(dict1[message.text])
-	# else:
-	# 	bot.send_message(message.chat.id, "Already on!")
+	dict1_str = {
+		'/cats_every_sec':   '5 seconds', 
+		'/cats_every_min':  '1 minute', 
+		'/cats_every_hour': '1 hour'
+	}
+	a = read_file()
+	if a == 'running':
+		stop(message)
+		bot.send_message(message.chat.id, """To restart the regular photo sending, please enter the command again!""")
+	else:
+		bot.send_message(message.chat.id, f"Cat photos will be sent every {dict1_str[message.text]}!")
+		write_to_file(1)
+	a = read_file()
+	while a == 'running':
+		bot.send_message(message.chat.id, "Here's a photo of a cat and a quote!")
+		full_quote2 = get_random_quote()
+		bot.send_message(message.chat.id, full_quote2)
+		r = requests.get('https://cataas.com/cat')
+		img = Image.open(BytesIO(r.content))
+		# img
+		bot.send_photo(message.chat.id, img)
+		time.sleep(dict1[message.text])
+		a = read_file()
+		if a == 'not_running':
+			break
+
 
 @bot.message_handler(commands=['send_cats'])
 def send_cats(message):
@@ -107,19 +131,20 @@ def process_name_step(message):
 
 @bot.message_handler(commands=['stop'])
 def stop(message):
-	global a
-	if a == 1:
-		bot.send_message(message.chat.id, "Stopping...")
-		a = 0
+	a = read_file()
+	write_to_file(0)
+	if a == 'not_running':
+		bot.send_message(message.chat.id, "No regular photo messaging is active.")
 	else:
-		bot.send_message(message.chat.id, "Not running.")
+		bot.send_message(message.chat.id, "The regular photo sending has been stopped.")
 
 
 
 def run():
-	bot.polling(none_stop=True)
+	bot.polling(non_stop=True)
 	# bot.infinity_polling()
 # To run the program
 if __name__ == '__main__':
+	print('Start the bot!')
 	run()
 
