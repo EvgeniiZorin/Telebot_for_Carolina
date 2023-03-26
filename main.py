@@ -1,10 +1,15 @@
 import telebot
+
 import time
+import threading
+import schedule
 import requests
 from PIL import Image
 from io import BytesIO
 import pandas as pd
 import os
+
+
 
 telebot_token = os.environ.get('TELEBOT_API_CARO')
 bot = telebot.TeleBot(telebot_token)
@@ -16,6 +21,7 @@ def read_file():
 
 def write_to_file(switch:int):
 	dict1 = {0:'not_running', 1:'running'}
+	print(f"Switched to {dict1[switch]}")
 	with open('status.txt', 'w') as f:
 		f.write(dict1[switch])
 
@@ -63,6 +69,7 @@ def get_random_quote() -> str:
 	quote_author, quote_text = list(quote['Author'])[0], list(quote['Quote'])[0]
 	return f'"{quote_text}"\n - {quote_author}'
 
+
 @bot.message_handler(commands=['quote'])
 def send_quote(message):
 	full_quote = get_random_quote()
@@ -70,43 +77,39 @@ def send_quote(message):
 	bot.send_message(message.chat.id, full_quote)
 
 
+def send_cat_photo(chat_id) -> None:
+	bot.send_message(chat_id, "Here's a photo of a cat and a quote!")
+	full_quote2 = get_random_quote()
+	bot.send_message(chat_id, full_quote2)
+	r = requests.get('https://cataas.com/cat')
+	img = Image.open(BytesIO(r.content))
+	# img
+	bot.send_photo(chat_id, img)
 
 @bot.message_handler(commands=[
 	'cats_every_sec',
 	'cats_every_min', 'cats_every_hour'
 ])
 def cats_every_min(message):
-	print(' - start "cats_every_min"')
+	print(f' - start "{message.text}"')
 	dict1 = {
-		'/cats_every_sec': 5, 
-		'/cats_every_min':60, 
-		'/cats_every_hour':3600
+		'/cats_every_sec':  5, 
+		'/cats_every_min':  60, 
+		'/cats_every_hour': 3600
 		}
 	dict1_str = {
 		'/cats_every_sec':   '5 seconds', 
 		'/cats_every_min':  '1 minute', 
 		'/cats_every_hour': '1 hour'
 	}
-	a = read_file()
-	if a == 'running':
-		stop(message)
-		bot.send_message(message.chat.id, """To restart the regular photo sending, please enter the command again!""")
-	else:
-		bot.send_message(message.chat.id, f"Cat photos will be sent every {dict1_str[message.text]}!")
-		write_to_file(1)
-	a = read_file()
-	while a == 'running':
-		bot.send_message(message.chat.id, "Here's a photo of a cat and a quote!")
-		full_quote2 = get_random_quote()
-		bot.send_message(message.chat.id, full_quote2)
-		r = requests.get('https://cataas.com/cat')
-		img = Image.open(BytesIO(r.content))
-		# img
-		bot.send_photo(message.chat.id, img)
-		time.sleep(dict1[message.text])
-		a = read_file()
-		if a == 'not_running':
-			break
+	# clear schedule first
+	schedule.clear(message.chat.id)
+	# first one message straight away
+	send_cat_photo(message.chat.id)
+	# restart the schedule
+	print(message.text)
+	schedule.every(dict1[message.text]).seconds.do(send_cat_photo, message.chat.id).tag(message.chat.id)
+
 
 
 @bot.message_handler(commands=['send_cats'])
@@ -131,20 +134,41 @@ def process_name_step(message):
 
 @bot.message_handler(commands=['stop'])
 def stop(message):
-	a = read_file()
-	write_to_file(0)
-	if a == 'not_running':
-		bot.send_message(message.chat.id, "No regular photo messaging is active.")
+	schedule.clear(message.chat.id)
+
+#################################################################################################
+
+def beep(chat_id) -> None:
+	"""Send the beep message."""
+	bot.send_message(chat_id, text='Beep!')
+
+
+@bot.message_handler(commands=['set'])
+def set_timer(message):
+	args = message.text.split()
+	if len(args) > 1 and args[1].isdigit():
+		sec = int(args[1])
+		schedule.every(sec).seconds.do(beep, message.chat.id).tag(message.chat.id)
 	else:
-		bot.send_message(message.chat.id, "The regular photo sending has been stopped.")
+		bot.reply_to(message, 'Usage: /set <seconds>')
 
 
+@bot.message_handler(commands=['unset'])
+def unset_timer(message):
+	schedule.clear(message.chat.id)
+
+#################################################################################################
 
 def run():
 	bot.polling(non_stop=True)
 	# bot.infinity_polling()
+
 # To run the program
 if __name__ == '__main__':
 	print('Start the bot!')
-	run()
+	# run()
+	threading.Thread(target=bot.infinity_polling, name='bot_infinity_polling', daemon=True).start()
+	while True:
+		schedule.run_pending()
+		time.sleep(1)
 
